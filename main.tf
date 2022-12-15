@@ -3,23 +3,38 @@ locals {
 }
 
 resource "aws_s3_bucket" "backend_logs" {
-  acl           = "log-delivery-write"
   bucket        = "${local.sharedName}-logs"
-  force_destroy = false
+  force_destroy = var.force_destroy
+}
 
-  versioning {
-    enabled = false
+resource "aws_s3_bucket_acl" "backend_logs_acl" {
+  bucket = aws_s3_bucket.backend_logs
+  acl    = "log-delivery-write"
+}
+
+resource "aws_s3_bucket_versioning" "backend_logs_versioning" {
+  bucket = aws_s3_bucket.backend_logs
+  versioning_configuration {
+    status = "Enabled"
   }
-  lifecycle_rule {
-    id      = "${local.sharedName}-logs-rule"
-    enabled = true
+}
 
-    prefix = var.access_log_prefix
+resource "aws_s3_bucket_lifecycle_configuration" "backend_logs_lifecycle" {
+  bucket = aws_s3_bucket.backend_logs
+  rule {
+    id     = "${local.sharedName}-logs-rule"
+    status = "Enabled"
 
-    tags = {
-      rule      = "${local.sharedName}-logs-rule"
-      autoclean = "true"
+    filter {
+      and {
+        prefix = var.access_log_prefix
+        tags = {
+          rule      = "${local.sharedName}-logs-rule"
+          autoclean = "true"
+        }
+      }
     }
+
 
     transition {
       days          = 45
@@ -46,26 +61,35 @@ resource "aws_s3_bucket_public_access_block" "backend_logs_exclude_public" {
 }
 
 resource "aws_s3_bucket" "backend" {
-  acl           = "private"
   bucket        = local.sharedName
   force_destroy = false
+}
 
-  logging {
-    target_bucket = aws_s3_bucket.backend_logs.bucket
-    target_prefix = var.access_log_prefix
-  }
+resource "aws_s3_bucket_acl" "backend_acl" {
+  bucket = aws_s3_bucket.backend
+  acl    = "private"
+}
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "aws:kms"
-      }
-      bucket_key_enabled = true
+resource "aws_s3_bucket_logging" "backend_logging" {
+  bucket        = aws_s3_bucket.backend
+  target_bucket = aws_s3_bucket.backend_logs.bucket
+  target_prefix = var.access_log_prefix
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "backend_sse" {
+  bucket = aws_s3_bucket.backend
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
     }
+    bucket_key_enabled = true
   }
+}
 
-  versioning {
-    enabled = true
+resource "aws_s3_bucket_versioning" "backend_versioning" {
+  bucket = aws_s3_bucket.backend
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
