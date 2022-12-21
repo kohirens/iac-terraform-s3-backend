@@ -2,6 +2,31 @@ locals {
   shared_name = "${var.environment}-${var.aws_account}-tf-backend"
 }
 
+moved {
+  from = aws_dynamodb_table.iac_table
+  to   = aws_dynamodb_table.backend_table
+}
+
+moved {
+  from = aws_s3_bucket.iac_bucket
+  to   = aws_s3_bucket.backend
+}
+
+moved {
+  from = aws_s3_bucket.iac_logs
+  to   = aws_s3_bucket.backend_logs
+}
+
+moved {
+  from = aws_s3_bucket_public_access_block.iac_bucket_exclude_public
+  to   = aws_s3_bucket_public_access_block.backend_bucket_exclude_public
+}
+
+moved {
+  from = aws_s3_bucket_public_access_block.iac_logs_exclude_public
+  to   = aws_s3_bucket_public_access_block.backend_logs_exclude_public
+}
+
 resource "aws_s3_bucket" "backend_logs" {
   bucket        = "${local.shared_name}-logs"
   force_destroy = var.force_destroy
