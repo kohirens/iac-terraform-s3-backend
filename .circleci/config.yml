@@ -1,25 +1,29 @@
 version: 2.1
 
 orbs:
-  vro: kohirens/version-release@2.3.5
+    vro: kohirens/version-release@2.3.5
 
 parameters:
-  secrets:
-    default: kohirens-automation
-    description: Secrets context
-    type: string
-  secrets_docker:
-    default: kohirens-automation-dockerhub
-    description: Secrets context
-    type: string
-  ssh_finger:
-    description: SSH fingerprint.
-    type: string
-    default: "0c:23:b6:8c:c9:d0:e0:46:5e:ea:2e:39:f1:5f:7f:a4"
-  triggered_by_bot:
-    default: false
-    description: Trigger publishing a release tag workflow.
-    type: boolean
+    secrets:
+        default: kohirens-automation
+        description: Secrets context
+        type: string
+    secrets_docker:
+        default: kohirens-automation-dockerhub
+        description: Secrets context
+        type: string
+    secrets_iac_test:
+        default: kohirens-iac-test
+        description: Secrets context
+        type: string
+    ssh_finger:
+        description: SSH fingerprint.
+        type: string
+        default: "0c:23:b6:8c:c9:d0:e0:46:5e:ea:2e:39:f1:5f:7f:a4"
+    triggered_by_bot:
+        default: false
+        description: Trigger publishing a release tag workflow.
+        type: boolean
 
 jobs:
     run-test:
@@ -36,27 +40,29 @@ jobs:
                   command: terraform test -junit-xml="terraform-test-results.xml"
 
 workflows:
-  qa:
-    jobs:
-        - run-test:
-            context: << pipeline.parameters.secrets_docker >>
-            filters: { branches: { ignore: /main|auto-update-changelog/ } }
+    quality_checks:
+        jobs:
+            - run-test:
+                  context:
+                      - << pipeline.parameters.secrets_docker >>
+                      - << pipeline.parameters.secrets_iac_test >>
+                  filters: { branches: { ignore: /main|auto-update-changelog/ } }
 
-  publish-changelog:
-    when:
-      and:
-        - equal: [main, << pipeline.git.branch >>]
-        - equal: [webhook, << pipeline.trigger_source >>]
-    jobs:
-        - vro/publish-changelog:
-            context: << pipeline.parameters.secrets >>
-            ssh_finger: << pipeline.parameters.ssh_finger >>
+    publish-changelog:
+        when:
+            and:
+                - equal: [main, << pipeline.git.branch >>]
+                - equal: [webhook, << pipeline.trigger_source >>]
+        jobs:
+            - vro/publish-changelog:
+                  context: << pipeline.parameters.secrets >>
+                  ssh_finger: << pipeline.parameters.ssh_finger >>
 
-  publish-release-tag:
-    when:
-      and:
-        - equal: [main, << pipeline.git.branch >>]
-        - << pipeline.parameters.triggered_by_bot >>
-    jobs:
-      - vro/tag-and-release:
-          context: << pipeline.parameters.secrets >>
+    publish-release-tag:
+        when:
+            and:
+                - equal: [main, << pipeline.git.branch >>]
+                - << pipeline.parameters.triggered_by_bot >>
+        jobs:
+            - vro/tag-and-release:
+                  context: << pipeline.parameters.secrets >>
