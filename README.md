@@ -15,6 +15,10 @@ By simply changing the remote backend to the very S3 bucket this makes, then run
 a new TerraGrunt plan. You will also have to switch it back when you want to
 tear down the backend infrastructure.
 
+## Status Badge
+
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/kohirens/aws-tf-s3-backend/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/kohirens/aws-tf-s3-backend/tree/main)
+
 ## Resources
 
 The following resources will be made.
