@@ -7,3 +7,4 @@
 # -----
 .terraform.lock.hcl
 /terraform-test-results.xml
+/tests/01-ignore.tfvars

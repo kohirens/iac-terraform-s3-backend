@@ -28,7 +28,7 @@ parameters:
 jobs:
     run-test:
         docker:
-            - image: hashicorp/terraform:1.3.6
+            - image: hashicorp/terraform:1.6.3
               auth:
                   username: ${DH_USER}
                   password: ${DH_PASS}
@@ -37,11 +37,10 @@ jobs:
             - run:
                   command: terraform fmt -check -write=false -diff
             - run:
-                  command: terraform test -junit-xml="terraform-test-results.xml"
-            - store_artifacts:
-                  path: terraform-test-results.xml
-            - store_test_results:
-                  path: terraform-test-results.xml
+                  command: |
+                      terraform init
+                      terraform validate
+                      terraform test
 
 workflows:
     quality_checks:
