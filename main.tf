@@ -1,5 +1,5 @@
 locals {
-  shared_name = "${var.environment}-${var.aws_account}-tf-backend"
+  shared_name = "${var.aws_account}-tf-backend"
 }
 
 resource "aws_s3_bucket" "iac_logs" {

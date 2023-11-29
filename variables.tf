@@ -13,11 +13,6 @@ variable "aws_region" {
   type        = string
 }
 
-variable "environment" {
-  description = "Designated environment label, for example: prod, beta, test, non-prod, etc."
-  type        = string
-}
-
 variable "force_destroy" {
   description = "force bucket destruction"
   type        = bool
