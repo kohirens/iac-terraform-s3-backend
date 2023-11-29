@@ -8,16 +8,26 @@ options:
     filters:
       Type:
         - add
-        - fix
-        - dep
+        - atm
         - chg
+        - ci
+        - dep
+        - doc
+        - fix
+        - mnt
+        - rft
         - rmv
   commit_groups:
     title_maps:
       add: Added
-      fix: Fixed
-      dep: Deprecated
+      atm: Automated
       chg: Changed
+      ci: Continuous Integration
+      dep: Deprecated
+      doc: Documented
+      fix: Fixed
+      mnt: Maintained
+      rft: Refactored
       rmv: Removed
   header:
     pattern: "^(\\w*)\\:\\s(.*)$"
