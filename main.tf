@@ -7,12 +7,6 @@ resource "aws_s3_bucket" "iac_logs" {
   force_destroy = var.force_destroy
 }
 
-
-resource "aws_s3_bucket_acl" "iac_logs" {
-  bucket = aws_s3_bucket.iac_logs.bucket
-  acl    = "log-delivery-write"
-}
-
 resource "aws_s3_bucket_versioning" "iac_logs" {
   bucket = aws_s3_bucket.iac_logs.bucket
   versioning_configuration {
@@ -52,7 +46,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "iac_logs" {
   }
 }
 
-
 resource "aws_s3_bucket_public_access_block" "iac_logs" {
   bucket                  = aws_s3_bucket.iac_logs.bucket
   block_public_acls       = true
@@ -64,11 +57,6 @@ resource "aws_s3_bucket_public_access_block" "iac_logs" {
 resource "aws_s3_bucket" "tf_state" {
   bucket        = local.shared_name
   force_destroy = false
-}
-
-resource "aws_s3_bucket_acl" "tf_state" {
-  bucket = aws_s3_bucket.tf_state.bucket
-  acl    = "private"
 }
 
 resource "aws_s3_bucket_logging" "tf_state" {
