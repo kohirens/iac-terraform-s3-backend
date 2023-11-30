@@ -11,31 +11,19 @@ run "execute" {
     access_log_prefix = "terraform-test-tf/"
     aws_region        = "us-west-1"
   }
-}
 
-run "verify_resources" {
-  module {
-    source = "./tests/01-backend"
-  }
-
-  variables {
-    state_bucket = run.execute.state_bucket_id
-    log_bucket   = run.execute.logs_bucket_name
-    table_name   = run.execute.table_name
+  assert {
+    error_message = "does not exist"
+    condition     = aws_s3_bucket.tf_state.id == "${var.aws_account}-tf-backend"
   }
 
   assert {
     error_message = "does not exist"
-    condition     = data.aws_s3_bucket.state.bucket == "${var.aws_account}-tf-backend"
+    condition     = aws_s3_bucket.iac_logs.id == "${var.aws_account}-tf-backend-logs"
   }
 
   assert {
     error_message = "does not exist"
-    condition     = data.aws_s3_bucket.logs.bucket == "${var.aws_account}-tf-backend-logs"
-  }
-
-  assert {
-    error_message = "does not exist"
-    condition     = data.aws_dynamodb_table.lookup.name == "${var.aws_account}-tf-backend-lock-table"
+    condition     = aws_dynamodb_table.tf_state_lock.name == "${var.aws_account}-tf-backend-lock-table"
   }
 }
