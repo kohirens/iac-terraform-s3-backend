@@ -18,3 +18,10 @@ variable "force_destroy" {
   type        = bool
   default     = false
 }
+
+
+variable "prefix" {
+  default     = ""
+  description = "Prefix used for resource names."
+  type        = string
+}
