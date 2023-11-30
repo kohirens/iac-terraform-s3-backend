@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="2.1.0"></a>
+## [2.1.0] - 2023-11-30
+### Added
+- Prefix Variable
+
+
 <a name="2.0.0"></a>
 ## [2.0.0] - 2023-11-30
 ### Continuous Integration
@@ -48,7 +54,8 @@
 <a name="0.0.1"></a>
 ## 0.0.1 - 2021-05-15
 
-[Unreleased]: https://github.com/kohirens/aws-tf-s3-backend.git/compare/2.0.0...HEAD
+[Unreleased]: https://github.com/kohirens/aws-tf-s3-backend.git/compare/2.1.0...HEAD
+[2.1.0]: https://github.com/kohirens/aws-tf-s3-backend.git/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/kohirens/aws-tf-s3-backend.git/compare/1.0.0...2.0.0
 [1.0.0]: https://github.com/kohirens/aws-tf-s3-backend.git/compare/0.0.2...1.0.0
 [0.0.2]: https://github.com/kohirens/aws-tf-s3-backend.git/compare/0.0.1...0.0.2
