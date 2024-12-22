@@ -1,27 +1,15 @@
-variable "access_log_prefix" {
-  description = "Prefix used for Access logs in the access log bucket."
+variable "label" {
+  description = "Optional label to apply to all resources"
   type        = string
 }
 
-variable "aws_account" {
-  description = "AWS account ID."
-  type        = string
+variable "tags" {
+  default     = {}
+  description = "Tags to apply to resources"
+  type        = map(string)
 }
 
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-}
-
-variable "force_destroy" {
-  description = "force bucket destruction"
-  type        = bool
-  default     = false
-}
-
-
-variable "prefix" {
-  default     = ""
-  description = "Prefix used for resource names."
-  type        = string
+variable "use_s3_locking" {
+  default     = true
+  description = "Use S3 object locking or set to false to use legacy DynamoDB locking"
 }

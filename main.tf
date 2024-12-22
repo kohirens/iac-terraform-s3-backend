@@ -1,32 +1,92 @@
+data "aws_caller_identity" "current" {}
+
 locals {
-  shared_name = "${var.prefix}${var.aws_account}-tf-backend"
+  account_id     = data.aws_caller_identity.current.account_id
+  name           = "terraform-backend"
+  full_name      = "${var.label}-${local.account_id}-${local.name}"
+  dynamodb_count = var.use_s3_locking ? 0 : 1
+
+  tags = merge({
+    module = local.name
+    label  = var.label
+  }, var.tags)
 }
 
-resource "aws_s3_bucket" "iac_logs" {
-  depends_on = [aws_s3_bucket.tf_state]
+resource "aws_s3_bucket_policy" "backend_storage" {
+  bucket = aws_s3_bucket.backend_storage.bucket
 
-  bucket        = "${local.shared_name}-logs"
-  force_destroy = var.force_destroy
+  policy = templatefile("${path.module}/backend-storage-policy.tftpl.json", {
+    account_id = local.account_id
+    bucket_arn = aws_s3_bucket.backend_storage.arn
+  })
 }
 
-resource "aws_s3_bucket_versioning" "iac_logs" {
-  bucket = aws_s3_bucket.iac_logs.bucket
+resource "aws_s3_bucket" "backend_storage" {
+  bucket        = local.full_name
+  tags          = local.tags
+  force_destroy = false # force the user to manually destroy all objects.
+}
+
+resource "aws_s3_bucket_logging" "backend_storage" {
+  bucket        = aws_s3_bucket.backend_storage.bucket
+  target_bucket = aws_s3_bucket.backend_storage_logs.bucket
+  target_prefix = local.name
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "backend_storage" {
+  bucket = aws_s3_bucket.backend_storage.bucket
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
+    }
+    bucket_key_enabled = true
+  }
+}
+
+resource "aws_s3_bucket_versioning" "backend_storage" {
+  bucket = aws_s3_bucket.backend_storage.bucket
+
   versioning_configuration {
     status = "Enabled"
   }
 }
 
-resource "aws_s3_bucket_lifecycle_configuration" "iac_logs" {
-  bucket = aws_s3_bucket.iac_logs.bucket
+resource "aws_s3_bucket_public_access_block" "backend_storage" {
+  bucket                  = aws_s3_bucket.backend_storage.bucket
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Begin access log bucket
+resource "aws_s3_bucket" "backend_storage_logs" {
+  bucket        = "${local.full_name}-logs"
+  force_destroy = false
+  tags          = local.tags
+}
+
+resource "aws_s3_bucket_versioning" "backend_storage_logs" {
+  bucket = aws_s3_bucket.backend_storage_logs.bucket
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "backend_storage_logs" {
+  bucket = aws_s3_bucket.backend_storage_logs.bucket
+
   rule {
-    id     = "${local.shared_name}-logs-rule"
+    id     = "${aws_s3_bucket.backend_storage_logs.bucket}-rule"
     status = "Enabled"
 
     filter {
       and {
-        prefix = var.access_log_prefix
+        prefix = local.name
         tags = {
-          rule      = "${local.shared_name}-logs-rule"
+          rule      = "${aws_s3_bucket.backend_storage_logs.bucket}-rule"
           autoclean = "true"
         }
       }
@@ -48,55 +108,19 @@ resource "aws_s3_bucket_lifecycle_configuration" "iac_logs" {
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "iac_logs" {
-  bucket                  = aws_s3_bucket.iac_logs.bucket
+resource "aws_s3_bucket_public_access_block" "backend_storage_logs" {
+  bucket                  = aws_s3_bucket.backend_storage_logs.bucket
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
 
-resource "aws_s3_bucket" "tf_state" {
-  bucket        = local.shared_name
-  force_destroy = false
-}
-
-resource "aws_s3_bucket_logging" "tf_state" {
-  depends_on    = [aws_s3_bucket.iac_logs]
-  bucket        = aws_s3_bucket.tf_state.bucket
-  target_bucket = aws_s3_bucket.iac_logs.bucket
-  target_prefix = var.access_log_prefix
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "tf_state" {
-  bucket = aws_s3_bucket.tf_state.bucket
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "aws:kms"
-    }
-    bucket_key_enabled = true
-  }
-}
-
-resource "aws_s3_bucket_versioning" "tf_state" {
-  bucket = aws_s3_bucket.tf_state.bucket
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "tf_state" {
-  bucket                  = aws_s3_bucket.tf_state.bucket
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_dynamodb_table" "tf_state_lock" {
-  depends_on = [aws_s3_bucket.tf_state]
-
-  name         = "${local.shared_name}-lock-table"
+resource "aws_dynamodb_table" "backend_lock_table" {
+  # If made, the the backend storage will use this for state locking.
+  depends_on   = [aws_s3_bucket.backend_storage]
+  count        = local.dynamodb_count
+  name         = "${local.full_name}-lock-table"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
 
@@ -104,4 +128,14 @@ resource "aws_dynamodb_table" "tf_state_lock" {
     name = "LockID"
     type = "S"
   }
+}
+
+resource "aws_dynamodb_resource_policy" "backend_lock_table" {
+  count        = local.dynamodb_count
+  resource_arn = aws_dynamodb_table.backend_lock_table[0].arn
+
+  policy = templatefile("${path.module}/lock-table-policy.tftpl.json", {
+    account_id = local.account_id
+    table_arn  = aws_dynamodb_table.backend_lock_table[0].arn
+  })
 }
